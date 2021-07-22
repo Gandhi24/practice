@@ -5,18 +5,16 @@ import (
 	"sync"
 )
 
-// SafeCounter is safe to use concurrently.
 type SafeCounter struct {
-	mu sync.Mutex
-	v  map[string]int
+	mux sync.Mutex
+	v   map[rune]int
 }
 
-// Inc increments the counter for the given key.
-func (c *SafeCounter) Inc(key string) {
-	c.mu.Lock()
-	// Lock so only one goroutine at a time can access the map c.v.
+// Inc increments the counter for the given key after locking the map.
+func (c *SafeCounter) Inc(key rune) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	c.v[key]++
-	c.mu.Unlock()
 }
 
 func CalculateFrequency(s string, c *SafeCounter, wg *sync.WaitGroup) {
@@ -24,19 +22,19 @@ func CalculateFrequency(s string, c *SafeCounter, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for _, r := range s {
-		go c.Inc(string(r))
+		go c.Inc(r)
 	}
 }
 
 func ConcurrentFrequencyCounter(strings []string) SafeCounter {
-	c := SafeCounter{v: make(map[string]int)}
+	c := SafeCounter{v: make(map[rune]int)}
 
 	var wg sync.WaitGroup
 
 	// Start a goroutine to calculate the frequency map for each string.
 	for _, s := range strings {
+		wg.Add(1)
 		go func(s string) {
-			wg.Add(1)
 			CalculateFrequency(s, &c, &wg)
 		}(s)
 	}
@@ -46,9 +44,11 @@ func ConcurrentFrequencyCounter(strings []string) SafeCounter {
 }
 
 func main() {
-	strings := []string{"abac", "daef", "ghi", "kl"}
+	strings := []string{"abac", "daef", "ffghid", "ekl"}
 
 	freqMap := ConcurrentFrequencyCounter(strings)
 
-	fmt.Println(freqMap.v)
+	for k, v := range freqMap.v {
+		fmt.Println(string(k), v)
+	}
 }

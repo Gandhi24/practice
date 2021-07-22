@@ -30,7 +30,7 @@ func (a *Account) Withdraw(amount float64) (float64, error) {
 	defer a.mux.Unlock()
 
 	if a.fund < amount {
-		return -1, errors.New("Insufficient funds")
+		return -1, errors.New("insufficient funds")
 	}
 
 	a.fund -= amount
